@@ -1,0 +1,7 @@
+[Unit]
+Description=Media drive backup daemon
+
+[Service]
+Type=oneshot
+CPUQuota=35%
+ExecStart=/usr/local/bin/mediabackup.sh
