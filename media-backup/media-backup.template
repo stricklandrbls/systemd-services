@@ -1,0 +1,9 @@
+# This config file is for backup configurations and destinations
+# Each line is a iteration of locations to backup denoted by:
+# ACTION     INPUT     TAR     DEST
+#
+# Example (Remove bracets)
+# [backup]:[/home/<user>/.vim]:[home.tar.xz]:[/path/to/backup/dir]
+#
+# Good luck!
+
