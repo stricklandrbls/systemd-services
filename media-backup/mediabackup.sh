@@ -1,7 +1,7 @@
 #!/bin/bash
 CONFDIR=/etc/mediabackupd
-#CONFDIR=./
-HOLDINGDIR=/tmp
+#CONFDIR=
+HOLDINGDIR=/tmp/mediabackupd
 LOGDIR=/etc/mediabackupd/logs
 
 function log(){
@@ -14,7 +14,7 @@ function log_and_print(){
     echo $1
 }
 
-function check_logs(){
+function setup(){
     if ! [ -e "${LOGDIR}" ]; then
         mkdir -p ${LOGDIR}
     elif [ -e "${LOGDIR}log" ]; then
@@ -25,6 +25,10 @@ function check_logs(){
             mv ${LOGDIR}/log ${LOGDIR}/log.${#logfiles}
         fi
     fi
+
+    if ! [ -e ${HOLDINGDIR} ]; then
+        mkdir -p $HOLDINGDIR
+    fi
 }
 
 if ! [ -e ${CONFDIR}/mediabackupd.conf ]; then
@@ -32,7 +36,7 @@ if ! [ -e ${CONFDIR}/mediabackupd.conf ]; then
    exit 1
 fi
 
-check_logs
+setup
 log_and_print "Initiating backup."
 
 BACKUPS=$(awk -F ':' '{if($1 == "backup"){print $2":"$3":"$4}}' ${CONFDIR}/mediabackupd.conf)
@@ -55,15 +59,22 @@ for item in $BACKUPS; do
             log "Creating ${tarfile::-3} with ${file}"
         fi
     fi
-
-    if [ -e ${dest} ]; then
-        mv ${HOLDINGDIR}/${tarfile::-3} ${dest}
-        xz -z ${dest}/${tarfile::-3}
-    else
-        log "Destination ${dest} does not exist. Archives will sit in /tmp"
-        xz -z ${HOLDINGDIR}/${tarfile::-3}
-    fi
 done
 
+tars=$(ls ${HOLDINGDIR}/*.tar)
+if [ -e ${dest} ]; then
+    final=${dest}
+else
+    final=${HOLDINGDIR}
+fi
+
+for compressable in $tars; do
+    log "Compressing ${compressable} to ${final}"
+    # ls prepends directory to filename, needs to replace with nothing.
+    if [ -e ${final}/${compressable/${HOLDINGDIR}/}.xz ]; then
+        rm -rf ${final}/${compressable/${HOLDINGDIR}}.xz
+    fi
+    xz -z ${final}/${compressable/${HOLDINGDIR}/}
+done
 
 log_and_print "Completed backup."
