@@ -1,36 +1,69 @@
 #!/bin/bash
-#CONFDIR=/etc/mediabackup/
-CONFDIR=./
-HOLDINGDIR=/tmp/
+CONFDIR=/etc/mediabackupd
+#CONFDIR=./
+HOLDINGDIR=/tmp
+LOGDIR=/etc/mediabackupd/logs
 
-if ! [ -e "${CONFDIR}"mediabackup.conf ]; then
-   echo "No configuration file can be found at "${CONFDIR:-1}
+function log(){
+    TIME=$(date | awk '{print $2,$3,$4}')
+    echo "[${TIME}] " $1 >> ${LOGDIR}/log
+}
+
+function log_and_print(){
+    log $1
+    echo $1
+}
+
+function check_logs(){
+    if ! [ -e "${LOGDIR}" ]; then
+        mkdir -p ${LOGDIR}
+    elif [ -e "${LOGDIR}log" ]; then
+        filesize=`stat ${LOGDIR}/log | awk '{if($1 == "Size:"){print $2}}'`
+        if [ ${#filesize} -gt 5 ]; then
+            echo "Filesize exceeds limit [${filesize}]; Generating fresh logfile."
+            logfiles=`ls ${LOGDIR}/log.*`
+            mv ${LOGDIR}/log ${LOGDIR}/log.${#logfiles}
+        fi
+    fi
+}
+
+if ! [ -e ${CONFDIR}/mediabackupd.conf ]; then
+   echo "No configuration file can be found at "${CONFDIR}
    exit 1
 fi
 
-BACKUPS=$(awk -F ':' '{if($1 == "backup"){print $2":"$3":"$4}}' ${CONFDIR}/mediabackup.conf)
+check_logs
+log_and_print "Initiating backup."
+
+BACKUPS=$(awk -F ':' '{if($1 == "backup"){print $2":"$3":"$4}}' ${CONFDIR}/mediabackupd.conf)
 for item in $BACKUPS; do
+    log "Parsing: ${item}"
+
     file=`echo ${item} | awk -F ':' '{print $1}'`
+
     if ! [ -e ${file} ]; then
-        echo "${file} does not exist"
+        log "${file} does not exist!" 
     else
         tarfile=`echo ${item} | awk -F ':' '{print $2}'`
         dest=`echo ${item} | awk -F ':' '{print $3}'`
-        if [ -e ${HOLDINGDIR}${tarfile::-3} ]; then
-            tar --append -f ${HOLDINGDIR}${tarfile::-3} ${file}
-            echo "Appending ${file} to ${tarfile::-3}"
+
+        if [ -e ${HOLDINGDIR}/${tarfile::-3} ]; then
+            tar --append -f ${HOLDINGDIR}/${tarfile::-3} ${file}
+            log "Appending ${file} to ${tarfile::-3}"
         else
-            tar -cf ${HOLDINGDIR}${tarfile::-3} ${file}
-            echo "Creating ${file} to ${tarfile::-3}"
+            tar -cf ${HOLDINGDIR}/${tarfile::-3} ${file}
+            log "Creating ${tarfile::-3} with ${file}"
         fi
     fi
 
     if [ -e ${dest} ]; then
-        mv ${HOLDINGDIR}${tarfile::-3} ${dest}
+        mv ${HOLDINGDIR}/${tarfile::-3} ${dest}
+        xz -z ${dest}/${tarfile::-3}
     else
-        echo "Destination ${dest} does not exist. Archives will sit in /tmp"
+        log "Destination ${dest} does not exist. Archives will sit in /tmp"
+        xz -z ${HOLDINGDIR}/${tarfile::-3}
     fi
 done
 
-TIME=$(date | awk '{print $2,$3,$4}')
-echo "Completed backup at: "${TIME}
+
+log_and_print "Completed backup."

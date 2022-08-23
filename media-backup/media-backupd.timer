@@ -1,6 +1,5 @@
 [Unit]
 Description=Timer for 'media-backupd.service'
-ConditionPathExists=/mnt/netshare
 
 [Timer]
 OnCalendar=Mon *-*-* 00:00:00
