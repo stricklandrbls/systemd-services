@@ -1,0 +1,2 @@
+[Unit]
+Description=Path monitoring template for file sync service.

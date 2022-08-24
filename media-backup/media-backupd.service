@@ -3,6 +3,6 @@ Description=Media drive backup daemon
 ConditionPathExists=/etc/mediabackupd/mediabackupd.conf
 
 [Service]
-Type=oneshot
+Type=simple
 CPUQuota=35%
 ExecStart=/usr/local/bin/mediabackup
