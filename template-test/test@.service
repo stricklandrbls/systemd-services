@@ -1,6 +1,12 @@
 [Unit]
 Description=Test template for service file with variables
+ConditionPathExists=%t/sync/%i
+#StartLimitIntervalSec=5
+#StartLimitBurst=3
 
 [Service]
+Type=oneshot
 #EnvironmentFile=/etc/test/test.env
-ExecStart=echo %t%i 
+ExecStart=/home/orion/git/systemd-services/template-test/testd.sh test %i
+#RestartSec=5
+Restart=no

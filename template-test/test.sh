@@ -10,44 +10,51 @@ CLR=0
 
 ID=0
 PATH_SOURCE="/"
+ID_DIR=/run/sync
 
 function verify_arg(){
     case $1 in
-        -al | -dl )
+        -al )
             # Check ID regex
             if ! [[ $ID =~ [a-zA-Z0-9]{1,} ]]; then
                 echo "Invalid ID. IDs must be alpha-numeric"
                 exit 2
             fi
             # Check if path is absolute
-            if ! [[ $PATH_SOURCE =~ ^[/].*[/] ]]; then
+            if ! [[ $PATH_SOURCE =~ ^[/].*[/].* ]]; then
                 echo -e "Path must be absolute, ie. start with \"/\" and outside of /"
                 exit 2
             fi
             # Check if path leads to dir
-            if ! [ -d $PATH_SOURCE ]; then
+            if [ -f $PATH_SOURCE ]; then
                 echo -e "Path must lead to a directory."
                 exit 2
             fi
             # Check if ID already exists
-            if [ -e /run/sync/$ID ]; then
+            if [ -e i${ID_DIR}/$ID ]; then
                 echo -e "A syncing service with this ID already exists\n\tSee \"systemctl @${ID}.path for details"
                 echo -e "\tDelete the service if you wish to continue with this ID."
                 exit 2
             fi
             
+            # Clear source variable
+            PATH_SOURCE=`echo $PATH_SOURCE | sed 's./$..'`
+
+            if ! [ -e $PATH_SOURCE ]; then
+                mkdir -p $PATH_SOURCE
+            fi
             # These IDs are from stat and have a trailing '/'
             uid=`stat ${PATH_SOURCE} | awk '{if($3~/Uid/){print $5}}'`
             gid=`stat ${PATH_SOURCE} | awk '{if($7~/Gid/){print $9}}'`
             
-            if [ -e $PATH_SOURCE ]; then
-                echo "mkdir -p $PATH_SOURCE"
-                echo "chown ${uid:-1}:${gid:-1} $PATH_SOURCE"
-            fi
             
-            echo "systemctl start test@${ID}.path"
-            echo "ln -s /run/sync/${ID} ${PATH_SOURCE}"
-
+            chown ${uid/\//}:${gid/\//} $PATH_SOURCE
+            #echo -e "chown ${uid/\//}:${gid/\//} $PATH_SOURCE"
+            systemctl start test@${ID}.path
+            #echo "systemctl start test@${ID}.path"
+            ln -s ${ID_DIR}/${ID} ${PATH_SOURCE}
+            #echo "ln -s /run/sync/${ID} ${PATH_SOURCE}"
+            chown ${uid/\//}:${gid/\//} ${ID_DIR}/${ID}
         ;;
     esac
 }
@@ -60,6 +67,7 @@ case $1 in
         fi
         ID=$2
         PATH_SOURCE=$3
+
         echo "${ID}: ${PATH_SOURCE}"
         verify_arg $1
     ;;

@@ -1,8 +1,16 @@
 [Unit]
 Description=Path monitoring file sync service [%t/sync/%i].
+StartLimitIntervalSec=4
+#ConditionPathExists=%t/sync/%i
+#
+# The following directives are implict when creating .path units.
+#
+#Before=paths.target shutdown.target test@.service
+#After=sysinit.target
+#Requires=sysinit.target
+#Conflicts=shutdown.target
 
 [Path]
 Unit=test@%i.service
-StartLimitIntervalSec=15
 MakeDirectory=true
 PathModified=%t/sync/%i
