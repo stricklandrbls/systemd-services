@@ -1,2 +1,8 @@
 [Unit]
-Description=Path monitoring template for file sync service.
+Description=Path monitoring file sync service [%t/sync/%i].
+
+[Path]
+Unit=test@%i.service
+StartLimitIntervalSec=15
+MakeDirectory=true
+PathModified=%t/sync/%i

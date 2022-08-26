@@ -2,4 +2,5 @@
 Description=Test template for service file with variables
 
 [Service]
-ExecStart=echo %i
+#EnvironmentFile=/etc/test/test.env
+ExecStart=echo %t%i 
