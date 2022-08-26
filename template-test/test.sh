@@ -14,9 +14,14 @@ PATH_SOURCE="/"
 function verify_arg(){
     case $1 in
         -al | -dl )
+            # Check ID regex
+            if ! [[ $ID =~ [a-zA-Z0-9]{1,} ]]; then
+                echo "Invalid ID. IDs must be alpha-numeric"
+                exit 2
+            fi
             # Check if path is absolute
-            if ! [[ $PATH_SOURCE =~ ^[/] ]]; then
-                echo -e "Path must be absolute, ie. start with \"/\"".
+            if ! [[ $PATH_SOURCE =~ ^[/].*[/] ]]; then
+                echo -e "Path must be absolute, ie. start with \"/\" and outside of /"
                 exit 2
             fi
             # Check if path leads to dir
@@ -31,9 +36,18 @@ function verify_arg(){
                 exit 2
             fi
             
+            # These IDs are from stat and have a trailing '/'
+            uid=`stat ${PATH_SOURCE} | awk '{if($3~/Uid/){print $5}}'`
+            gid=`stat ${PATH_SOURCE} | awk '{if($7~/Gid/){print $9}}'`
+            
+            if [ -e $PATH_SOURCE ]; then
+                mkdir -p $PATH_SOURCE
+                chown ${uid:-1}:${gid:-1} $PATH_SOURCE
+            fi
+            
             echo "systemctl start test@${ID}.path"
             echo "ln -s /run/sync/${ID} ${PATH_SOURCE}"
-            echo "chown ${EUID}:${EUID}"
+
         ;;
     esac
 }
