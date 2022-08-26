@@ -41,8 +41,8 @@ function verify_arg(){
             gid=`stat ${PATH_SOURCE} | awk '{if($7~/Gid/){print $9}}'`
             
             if [ -e $PATH_SOURCE ]; then
-                mkdir -p $PATH_SOURCE
-                chown ${uid:-1}:${gid:-1} $PATH_SOURCE
+                echo "mkdir -p $PATH_SOURCE"
+                echo "chown ${uid:-1}:${gid:-1} $PATH_SOURCE"
             fi
             
             echo "systemctl start test@${ID}.path"
