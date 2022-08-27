@@ -1,7 +1,0 @@
-[Unit]
-Description = File syncing between the constellation.
-Reqiures = network.service
-
-[Service]
-ExecCondition = filesync.sh preflight
-
