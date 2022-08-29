@@ -10,3 +10,6 @@ Type=oneshot
 ExecStart=/home/orion/git/systemd-services/template-test/testd.sh test %i
 #RestartSec=5
 Restart=no
+
+[Install]
+WantedBy=defaults.target
