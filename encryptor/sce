@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+##################################################
+# Terminal Output Formatting Functions
+##################################################
+cRedB="\e[01;31m"
+cGreenB="\e[01;32m"
+cYellowB="\e[01;33m"
+cEnd="\e[00m"
+
+function success(){
+    echo -e "[${cGreeB}+${cEnd}] ${1}"
+}
+function warn(){
+    echo -e "[${cYellowB}-${cEnd}] ${1}"
+}
+function err(){
+    echo -e "[${cRedB}!${cEnd}] ${1}"
+}
+function info(){
+    echo -e "[ ] ${1}"
+}
+function display_help() {
+    echo -e "SCE (SmartChain Encryptor) - Proprietary encryption script
+    usage: \$0 (opt) <file>
+
+Options:
+    -a  = Archive unencrypted file. Set SC_ARCHIVE_DIR env var to redirect from default \$HOME/.scencrypt/archive
+    -v  = Verbose output"
+}
+
+####################################################################################
+#
+# Parse Arugments
+#
+####################################################################################
+[ $# -lt 1 ] && { display_help ; exit 10 ; }
+
+while getopts 'av' OPT; do
+    case $OPT in
+        a ) OPT_ARCHIVE=1 ;;
+        v ) OPT_VERBOSE=1 ;;
+        : ) err "No parameter specified" && exit 10 ;;
+        * ) err "Unknown option ${OPT}" && exit 10 ;;
+    esac
+done 
+shift $((OPTIND -1))
+
+####################################################################################
+#
+# Target file functions
+#
+####################################################################################
+TARGET_PATH=${1:-""}
+ORIGINAL_PERMS=""
+
+function validate_target_file() {
+    [[ $OPT_VERBOSE -eq 1 ]] && info "\tPath: ${TARGET_PATH}"
+    [[ -z $TARGET_PATH ]] && { err "Filename parameter required" ; exit 10 ; }
+
+    [[ $TARGET_PATH =~ ^[/] ]] || { TARGET_PATH=$(pwd)/$TARGET_PATH ; }
+
+    [[ ! -e $TARGET_PATH ]] && { err "Encryption target does not exist" ; exit 10 ; }
+
+    [[ $OPT_VERBOSE -eq 1 ]] && info "\tPath: ${TARGET_PATH}"
+
+    ORIGINAL_PERMS=`stat "$TARGET_PATH" -c %a`
+    [[ $OPT_VERBOSE -eq 1 ]] && info "\tPerms: ${ORIGINAL_PERMS}"
+}
+
+DIR_ENC_TMP=/tmp/.encrypt
+DIR_USR_TMP=$DIR_ENC_TMP/$UID
+DIR_USR_HOME=$HOME/.scencrypt
+DIR_USR_ARCHIVE=${SC_ARCHIVE_DIR:-$DIR_USR_HOME/archive/}
+
+function setup_directories() {
+    [[ ! -e $DIR_USR_HOME ]] && { mkdir -p "$DIR_USR_HOME" ; umask 2077 "$DIR_USR_HOME" ; }
+    [[ `stat $DIR_USR_HOME -c %a` != "700" ]] && { chmod -R 700 "$DIR_USR_HOME" ; umask 2077 "$DIR_USR_HOME" ; }
+
+    [[ ! -e $DIR_USR_ARCHIVE ]] && { mkdir -p "$DIR_USR_ARCHIVE" ; }
+    [[ `stat $DIR_USR_ARCHIVE -c %a` != "700" ]] && { chmod -R 700 "$DIR_USR_ARCHIVE" ; umask 2077 "$DIR_USR_ARCHIVE" ; }
+
+    [[ ! -e $DIR_USR_TMP ]] && { mkdir -p "$DIR_USR_TMP" ; chmod 777 "$DIR_ENC_TMP" ; } 
+    [[ `stat $DIR_USR_TMP -c %a` != "700" ]] && { chmod 700 "$DIR_USR_TMP" ; }
+}
+####################################################################################
+#
+# Script Start
+#
+####################################################################################
+validate_target_file
+setup_directories
+
+TARGET_FILENAME=${TARGET_PATH##*/}
+[[ $OPT_VERBOSE -eq 1 ]] && info "\tBase: ${TARGET_FILENAME}"
+
+TARGET_OUT=$DIR_USR_TMP/$TARGET_FILENAME.enc
+[[ $OPT_VERBOSE -eq 1 ]] && info "\tOut : ${TARGET_OUT}"
+
+ITER=${SC_ITER:-5}
+TARGET_OUT=$TARGET_OUT$ITER
+
+openssl enc -aes256 -in "$TARGET_PATH" -out "$TARGET_OUT" -iter "$ITER"
+[[ ! -e "$TARGET_OUT" ]] && { err "File encryption failed" ; exit 11 ; }
+[[ $OPT_ARCHIVE -eq 1 ]] && { mv "$TARGET_PATH" "$DIR_USR_ARCHIVE" ; }
+
+mv "$TARGET_OUT" "$TARGET_PATH" && chmod $ORIGINAL_PERMS "$TARGET_PATH"
+[[ $OPT_VERBOSE -eq 1 ]] && info "mv ${TARGET_OUT} ${TARGET_PATH} && chmod ${ORIGINAL_PERMS} ${TARGET_PATH}"
