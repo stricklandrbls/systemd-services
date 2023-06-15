@@ -18,7 +18,7 @@ function err(){
     echo -e "[${cRedB}!${cEnd}] ${1}"
 }
 function info(){
-    echo -e "[ ] ${1}"
+    echo -e "[.] ${1}"
 }
 function display_help() {
     echo -e "SCE (SmartChain Encryptor) - Proprietary encryption script
@@ -38,26 +38,33 @@ DIR_UID=0
 DIR_GID=0
 
 declare -A DIR_MNT_POINTS
+declare -A DIR_BETELGUESE_MNTS
 declare -A SYS_INFO
 DIR_MNT_POINTS[betelguese]="$DIR_HOME/$DIR_CONSTELLATION/betelguese/mnts/"
 DIR_MNT_POINTS[bellatrix]="$DIR_HOME/$DIR_CONSTELLATION/bellatrix/mnts/"
 
+DIR_SERVER_ROOT="/srv"
+
+DIR_BETELGUESE_MNTS[media]="$DIR_MNT_POINTS[betelguese]/Media"
+
+DIR_BELLATRIX_MNTS[files]="$DIR_MNT_POINTS[bellatrix]/Files"
+DIR_BELLATRIX_MNTS[photos]="$DIR_MNT_POINTS[bellatrix]/Photos"
+DIR_BELLATRIX_MNTS[books]="$DIR_MNT_POINTS[bellatrix]/Books"
 ####################################################################################
 # FUNCTION DEFINITIONS
 ####################################################################################
 function setup_install() {
   sys_info
 
-  for dir in ${DIR_MNT_POINTS[@]}; do
+  for dir in ${DIR_BELLATRIX_MNTS[@]}; do
     [[ ! -e "$dir" ]] && { mkdir -p "$dir" ; chown $DIR_UID:$DIR_GID "$dir" ; chmod 750 "$dir" ; }
     [[ ! -d "$dir" ]] && { warn "Omitting [$dir] - Not a directory" ; }
   done
 
-}
-
-function setup_variables() {
-  home_dir
-  mnt_points
+  for dir in ${DIR_BETELGUESE_MNTS}; do
+    [[ ! -e "$dir" ]] && { mkdir -p "$dir" ; chown $DIR_UID:$DIR_GID "$dir" ; chmod 750 "$dir" ; }
+    [[ ! -d "$dir" ]] && { warn "Omitting [$dir] - Not a directory" ; }
+  done
 }
 
 function home_dir() {
@@ -70,7 +77,13 @@ function home_dir() {
 }
 
 function mnt_points() {
-  echo "${DIR_MNT_POINTS[@]}"
+  echo "${DIR_BELLATRIX_MNTS[@]}"
+  echo "${DIR_BETELGUESE_MNTS[@]}"
+}
+
+function setup_variables() {
+  home_dir
+  mnt_points
 }
 
 function sys_info() {
@@ -80,7 +93,11 @@ function sys_info() {
   SYS_INFO[arch]=`uname -m`
   SYS_INFO[version]=`uname -v | awk '{print $1}'`
 
-  echo "${SYS_INFO[@]}"
+  for item in ${SYS_INFO[@]}; do
+    info "${item}"
+  done
+
+  #echo "${SYS_INFO[@]}"
 }
 
 ####################################################################################
@@ -90,3 +107,4 @@ function sys_info() {
 setup_variables
 setup_install
 
+exit 0
